@@ -1,0 +1,19 @@
+{
+  "name": "kanan/web",
+  "description": "Kanan Web - Aplicación de salud segura",
+  "type": "project",
+"require": {
+    "php": "^8.2",
+    "tecnickcom/tcpdf": "^6.7",
+    "phpmailer/phpmailer": "^6.9"
+},
+  "autoload": {
+    "psr-4": {
+      "Config\\": "config/",
+      "Controllers\\": "controllers/",
+      "Models\\": "models/",
+      "Utils\\": "utils/"
+    }
+  }
+}
+
