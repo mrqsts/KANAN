@@ -1,9 +1,9 @@
 -- database.sql
-CREATE DATABASE IF NOT EXISTS kanan_web
+CREATE DATABASE IF NOT EXISTS if0_41261440_kanan
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-USE kanan_web;
+USE if0_41261440_kanan;
 
 -- Tabla de usuarios (NO guardar PHI aquí)
 CREATE TABLE users (

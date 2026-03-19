@@ -1,7 +1,7 @@
 -- Ejecutar solo si ya tienes la BD creada sin email ni mfa_codes:
 -- mariadb -u root -p kanan_web < database_migration_mfa.sql
 
-USE kanan_web;
+USE if0_41261440_kanan;
 
 ALTER TABLE users
   ADD COLUMN email VARCHAR(255) NULL AFTER nombre,
