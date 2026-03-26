@@ -5,7 +5,7 @@ error_reporting(E_ALL);
 use Controllers\AuthController;
 use Controllers\DashboardController;
 
-require_once __DIR__ . '/../autoload.php';
+require_once __DIR__ . '/kanan_app/autoload.php';
 
 // 3.4 Sesiones: identificadores no predecibles (strict mode rechaza IDs no iniciados por el servidor)
 ini_set('session.use_strict_mode', '1');
@@ -23,12 +23,12 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-// 3.5 Manejo de errores: no exponer stack trace ni mensajes internos al usuario
+// 3.5 Manejo de errores: MOSTRAR ERRORES PARA DEBUG
 set_exception_handler(function (\Throwable $e) {
-    error_log('Uncaught ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
-    http_response_code(500);
-    header('Content-Type: text/html; charset=UTF-8');
-    echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Error</title></head><body><p>Ha ocurrido un error. Intenta de nuevo más tarde.</p></body></html>';
+    echo "<h1>Error detectado:</h1>";
+    echo "<p><strong>Mensaje:</strong> " . $e->getMessage() . "</p>";
+    echo "<p><strong>Archivo:</strong> " . $e->getFile() . " en la línea " . $e->getLine() . "</p>";
+    echo "<pre>" . $e->getTraceAsString() . "</pre>";
 });
 
 // 3.1 Validación de entrada: ruta permitida (whitelist), evita inyección
@@ -36,7 +36,7 @@ $route = isset($_GET['route']) && is_string($_GET['route']) ? trim($_GET['route'
 $route = preg_replace('/[^a-z0-9_]/', '', $route) ?: 'login';
 
 $allowedRoutes = [
-    'login', 'login_mfa', 'logout', 'register', 'dashboard',
+    'login', 'login_mfa', 'logout', 'register', 'register_success', 'dashboard',
     'health_store', 'med_list', 'med_store', 'personal_data_save',
     'save_email', 'change_pin', 'pdf_report', 'generate_qr', 'set_public_url',
 ];
@@ -44,48 +44,54 @@ if (!in_array($route, $allowedRoutes, true)) {
     $route = 'login';
 }
 
+$authController = new AuthController();
+$dashboardController = new DashboardController();
+
 switch ($route) {
     case 'login':
-        (new AuthController())->login();
+        $authController->login();
         break;
     case 'register':
-        (new AuthController())->register();
+        $authController->register();
+        break;
+    case 'register_success':
+        $authController->registerSuccess();
         break;
     case 'login_mfa':
-        (new AuthController())->loginMfa();
+        $authController->loginMfa();
         break;
     case 'logout':
-        (new AuthController())->logout();
+        $authController->logout();
         break;
     case 'dashboard':
-        (new DashboardController())->index();
+        $dashboardController->index();
         break;
     case 'health_store':
-        (new DashboardController())->storeHealthLog();
+        $dashboardController->storeHealthLog();
         break;
     case 'med_list':
-        (new DashboardController())->listMedications();
+        $dashboardController->listMedications();
         break;
     case 'med_store':
-        (new DashboardController())->storeMedication();
+        $dashboardController->storeMedication();
         break;
     case 'personal_data_save':
-        (new DashboardController())->savePersonalData();
+        $dashboardController->savePersonalData();
         break;
     case 'save_email':
-        (new DashboardController())->saveEmail();
+        $dashboardController->saveEmail();
         break;
     case 'change_pin':
-        (new DashboardController())->changePin();
+        $dashboardController->changePin();
         break;
     case 'pdf_report':
-        (new DashboardController())->generatePdfReport();
+        $dashboardController->generatePdfReport();
         break;
     case 'generate_qr':
-        (new DashboardController())->generateEmergencyQr();
+        $dashboardController->generateEmergencyQr();
         break;
     case 'set_public_url':
-        (new DashboardController())->setPublicUrl();
+        $dashboardController->setPublicUrl();
         break;
     default:
         http_response_code(404);

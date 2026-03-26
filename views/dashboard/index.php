@@ -1,323 +1,165 @@
 <?php
-
 use Utils\Security;
-
 ob_start();
 ?>
-<div class="row mb-3">
-    <div class="col-md-8">
-        <h2>Dashboard</h2>
-        <?php if (!empty($userName)): ?>
-            <p class="text-muted mb-0">Conectado como <strong><?= Security::e($userName); ?></strong></p>
-        <?php endif; ?>
+
+<div class="dashboard-header" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end;">
+    <div>
+        <h1 style="margin: 0; color: var(--primary);">Panel de Salud</h1>
+        <p style="color: #666; margin: 0;">Bienvenido de nuevo, <strong><?= Security::e($userName); ?></strong></p>
     </div>
-    <div class="col-md-4 text-end">
-        <a href="index.php?route=logout" class="btn btn-outline-secondary btn-sm">Salir</a>
+    <div style="text-align: right;">
+        <span style="font-size: 0.8rem; color: #888;">ID: #<?= $userId ?></span>
     </div>
 </div>
 
 <?php if (!empty($_GET['pin_ok'])): ?>
-    <div class="alert alert-success alert-dismissible fade show">PIN actualizado correctamente.
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-<?php endif; ?>
-<?php if (!empty($_GET['pin_error'])): ?>
-    <div class="alert alert-danger alert-dismissible fade show">
-        <?php
-        $err = (int)($_GET['pin_error'] ?? 0);
-        echo $err === 1 ? 'PIN debe ser de 6 dígitos.' : ($err === 2 ? 'El nuevo PIN y la confirmación no coinciden.' : ($err === 3 ? 'Elige un PIN más seguro (evita 123456, 000000 o secuencias).' : 'PIN actual incorrecto.'));
-        ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-<?php endif; ?>
-<?php if (!empty($_GET['email_ok'])): ?>
-    <div class="alert alert-success alert-dismissible fade show">Correo actualizado. Los próximos inicios de sesión enviarán el código MFA a tu correo.
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-<?php endif; ?>
-<?php if (!empty($_GET['email_error'])): ?>
-    <div class="alert alert-danger alert-dismissible fade show">
-        <?= $_GET['email_error'] == '2' ? 'Ese correo ya está en uso por otra cuenta.' : 'El correo no es válido.'; ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+    <div class="alert alert-success">PIN actualizado correctamente.</div>
 <?php endif; ?>
 
-<div class="row mb-3">
-    <div class="col-12">
-        <div class="card shadow-sm">
-            <div class="card-header">Mi cuenta</div>
-            <div class="card-body">
-                <p class="mb-2"><strong>Nombre de cuenta:</strong> <?= Security::e($userName ?? ''); ?></p>
-                <form method="post" action="index.php?route=change_pin" class="row g-2 align-items-end">
-                    <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
-                    <div class="col-md-2">
-                        <label class="form-label small">PIN actual</label>
-                        <input type="password" name="current_pin" class="form-control form-control-sm" pattern="\d{6}" maxlength="6" placeholder="6 dígitos" required>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Nuevo PIN</label>
-                        <input type="password" name="new_pin" class="form-control form-control-sm" pattern="\d{6}" maxlength="6" placeholder="6 dígitos" required>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Confirmar nuevo PIN</label>
-                        <input type="password" name="new_pin_confirm" class="form-control form-control-sm" pattern="\d{6}" maxlength="6" placeholder="6 dígitos" required>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-sm btn-warning">Cambiar PIN</button>
-                    </div>
-                </form>
-            </div>
+<div class="dashboard-grid">
+    <!-- COLUMNA IZQUIERDA: BITÁCORA -->
+    <div class="card">
+        <div class="section-header">
+            <h2 style="font-size: 1.2rem; margin: 0;">🩺 Bitácora Diaria</h2>
         </div>
-    </div>
-</div>
-
-<div class="row mb-3">
-    <div class="col-md-6 mb-3">
-        <div class="card shadow-sm">
-            <div class="card-header">Correo para MFA</div>
-            <div class="card-body">
-                <p class="small text-muted mb-2">Vincula un correo para recibir códigos de verificación en dos pasos por email. Si no lo configuras, se usará el código por defecto (123123).</p>
-                <form method="post" action="index.php?route=save_email" class="row g-2 align-items-end">
-                    <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
-                    <div class="col">
-                        <label class="form-label small">Correo electrónico</label>
-                        <input type="email" name="email" class="form-control form-control-sm" maxlength="255"
-                               placeholder="tu@correo.com" value="<?= Security::e($userEmail ?? ''); ?>">
+        
+        <form method="post" action="index.php?route=health_store" style="margin-bottom: 2rem;">
+            <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label>Temperatura (°C)</label>
+                    <input type="number" step="0.1" name="temperatura" min="35" max="42" placeholder="36.5" required>
+                </div>
+                <div class="form-group">
+                    <label>Presión (Sist/Diast)</label>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <input type="number" name="presion_sys" min="70" max="250" placeholder="120" required style="padding: 0.8rem 0.4rem; text-align: center;">
+                        <span>/</span>
+                        <input type="number" name="presion_dia" min="40" max="150" placeholder="80" required style="padding: 0.8rem 0.4rem; text-align: center;">
                     </div>
-                    <div class="col-auto">
-                        <button type="submit" class="btn btn-sm btn-primary">Guardar</button>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
-    </div>
-</div>
 
-<div class="row mb-3">
-    <div class="col-12">
-        <div class="card shadow-sm">
-            <div class="card-header">Mis datos personales</div>
-            <div class="card-body">
-                <p class="small text-muted mb-3">Estos datos se muestran en el acceso de emergencia (QR). Completa al menos tipo de sangre y alergias.</p>
-                <form method="post" action="index.php?route=personal_data_save" class="row g-2">
-                    <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
-                    <div class="col-md-2">
-                        <label class="form-label">Tipo de sangre</label>
-                        <select name="sangre" class="form-select">
-                            <option value="">— Elegir —</option>
-                            <option value="A+" <?= ($personal['sangre'] ?? '') === 'A+' ? 'selected' : '' ?>>A+</option>
-                            <option value="A-" <?= ($personal['sangre'] ?? '') === 'A-' ? 'selected' : '' ?>>A-</option>
-                            <option value="B+" <?= ($personal['sangre'] ?? '') === 'B+' ? 'selected' : '' ?>>B+</option>
-                            <option value="B-" <?= ($personal['sangre'] ?? '') === 'B-' ? 'selected' : '' ?>>B-</option>
-                            <option value="AB+" <?= ($personal['sangre'] ?? '') === 'AB+' ? 'selected' : '' ?>>AB+</option>
-                            <option value="AB-" <?= ($personal['sangre'] ?? '') === 'AB-' ? 'selected' : '' ?>>AB-</option>
-                            <option value="O+" <?= ($personal['sangre'] ?? '') === 'O+' ? 'selected' : '' ?>>O+</option>
-                            <option value="O-" <?= ($personal['sangre'] ?? '') === 'O-' ? 'selected' : '' ?>>O-</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Alergias</label>
-                        <input type="text" name="alergias" class="form-control" placeholder="Ej: Penicilina, polen"
-                               value="<?= Security::e($personal['alergias'] ?? '') ?>">
-                    </div>
-                    <div class="col-md-1">
-                        <label class="form-label">Edad</label>
-                        <input type="number" name="edad" class="form-control" min="1" max="120" placeholder="—"
-                               value="<?= Security::e((string)($personal['edad'] ?? '')) ?>">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Altura (cm)</label>
-                        <input type="number" name="altura" class="form-control" step="0.1" min="0" placeholder="—"
-                               value="<?= Security::e((string)($personal['altura'] ?? '')) ?>">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Peso (kg)</label>
-                        <input type="number" name="peso" class="form-control" step="0.1" min="0" placeholder="—"
-                               value="<?= Security::e((string)($personal['peso'] ?? '')) ?>">
-                    </div>
-                    <div class="col-md-1 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">Guardar</button>
-                    </div>
-                </form>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label>Peso (kg)</label>
+                    <input type="number" step="0.1" name="peso" min="20" max="500" placeholder="70.5">
+                </div>
+                <div class="form-group">
+                    <label>Energía (1-10)</label>
+                    <input type="number" min="1" max="10" name="nivel_energia" placeholder="8">
+                </div>
             </div>
-        </div>
-    </div>
-</div>
 
-<div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm">
-            <div class="card-header">Bitácora de salud</div>
-            <div class="card-body">
-                <form method="post" action="index.php?route=health_store">
-                    <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
-                    <div class="mb-2">
-                        <label class="form-label">Temperatura (°C)</label>
-                        <input type="number" step="0.1" name="temperatura" class="form-control">
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Presión arterial</label>
-                        <input type="text" name="presion" class="form-control" placeholder="120/80">
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Peso (kg)</label>
-                        <input type="number" step="0.1" name="peso" class="form-control">
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Nivel de energía (1-10)</label>
-                        <input type="number" min="1" max="10" name="nivel_energia" class="form-control">
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Malestares / síntomas</label>
-                        <textarea name="sintomas" class="form-control" rows="2"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100 mt-2">Guardar registro</button>
-                </form>
+            <div class="form-group">
+                <label>Síntomas o malestares</label>
+                <textarea name="sintomas" rows="2" placeholder="Describe cómo te sientes hoy..."></textarea>
             </div>
-        </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Guardar Registro</button>
+        </form>
 
-        <div class="card mt-3 shadow-sm">
-            <div class="card-header">Historial reciente</div>
-            <div class="card-body" style="max-height: 250px; overflow-y: auto;">
-                <?php if (empty($healthLogs)): ?>
-                    <p class="text-muted">Sin registros aún.</p>
-                <?php else: ?>
-                    <table class="table table-sm mb-0">
-                        <thead>
+        <div class="section-header">
+            <h3 style="font-size: 1rem; margin: 0;">Historial Reciente</h3>
+        </div>
+        <div style="max-height: 200px; overflow-y: auto;">
+            <?php if (empty($healthLogs)): ?>
+                <p style="font-size: 0.9rem; color: #999; text-align: center;">No hay registros previos.</p>
+            <?php else: ?>
+                <table style="width: 100%; font-size: 0.85rem; border-collapse: collapse;">
+                    <thead style="border-bottom: 1px solid #eee;">
                         <tr>
-                            <th>Fecha</th>
-                            <th>Temp</th>
-                            <th>Presión</th>
-                            <th>Energía</th>
+                            <th style="text-align: left; padding: 5px;">Fecha</th>
+                            <th style="text-align: center; padding: 5px;">Temp</th>
+                            <th style="text-align: center; padding: 5px;">Ene</th>
                         </tr>
-                        </thead>
-                        <tbody>
-                        <?php foreach ($healthLogs as $log): ?>
-                            <tr>
-                                <td><?= Security::e($log['fecha']); ?></td>
-                                <td><?= Security::e((string)$log['temperatura']); ?></td>
-                                <td><?= Security::e($log['presion']); ?></td>
-                                <td><?= Security::e((string)$log['nivel_energia']); ?></td>
+                    </thead>
+                    <tbody>
+                        <?php foreach (array_slice($healthLogs, 0, 5) as $log): ?>
+                            <tr style="border-bottom: 1px solid #f9f9f9;">
+                                <td style="padding: 8px 5px;"><?= date('d/m H:i', strtotime($log['fecha'])) ?></td>
+                                <td style="padding: 8px 5px; text-align: center;"><?= Security::e((string)$log['temperatura']) ?>°</td>
+                                <td style="padding: 8px 5px; text-align: center;"><?= Security::e((string)$log['nivel_energia']) ?></td>
                             </tr>
                         <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
-            </div>
+                    </tbody>
+                </table>
+            <?php endif; ?>
         </div>
     </div>
 
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm mb-3">
-            <div class="card-header">Gestión de medicamentos</div>
-            <div class="card-body">
-                <form method="post" action="index.php?route=med_store" class="mb-3">
-                    <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
-                    <div class="mb-2">
-                        <label class="form-label">Nombre</label>
-                        <input type="text" name="nombre_medicamento" class="form-control" required>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Dosis</label>
-                        <input type="text" name="dosis" class="form-control" required>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label">Horario</label>
-                        <input type="text" name="horario" class="form-control" placeholder="Ej: 08:00 y 20:00" required>
-                    </div>
-                    <button type="submit" class="btn btn-success w-100">Agregar</button>
-                </form>
-
-                <?php if (empty($medications)): ?>
-                    <p class="text-muted">Sin medicamentos registrados.</p>
-                <?php else: ?>
-                    <table class="table table-sm">
-                        <thead>
-                        <tr>
-                            <th>Medicamento</th>
-                            <th>Dosis</th>
-                            <th>Horario</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <?php foreach ($medications as $med): ?>
-                            <tr>
-                                <td><?= Security::e($med['nombre_medicamento']); ?></td>
-                                <td><?= Security::e($med['dosis']); ?></td>
-                                <td><?= Security::e($med['horario']); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
+    <!-- COLUMNA DERECHA: MEDICAMENTOS Y REPORTES -->
+    <div class="card">
+        <div class="section-header">
+            <h2 style="font-size: 1.2rem; margin: 0;">💊 Medicamentos</h2>
+        </div>
+        
+        <form method="post" action="index.php?route=med_store" style="margin-bottom: 1.5rem;">
+            <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
+            <div class="form-group">
+                <input type="text" name="nombre_medicamento" placeholder="Nombre (Ej: Paracetamol)" required>
             </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <input type="text" name="dosis" placeholder="Dosis (Ej: 500mg)" required>
+                <input type="text" name="horario" placeholder="Horario (8:00)" required>
+            </div>
+            <button type="submit" class="btn btn-secondary" style="width: 100%; padding: 0.5rem; margin-top: 10px;">Agregar</button>
+        </form>
+
+        <div style="margin-bottom: 2rem;">
+            <?php foreach ($medications as $med): ?>
+                <div style="background: rgba(82, 183, 136, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="color: var(--primary);"><?= Security::e($med['nombre_medicamento']) ?></strong>
+                        <div style="font-size: 0.8rem; color: #666;"><?= Security::e($med['dosis']) ?> • <?= Security::e($med['horario']) ?></div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         </div>
 
-        <div class="card shadow-sm mb-3">
-            <div class="card-body text-center">
-                <h5>Emergencia</h5>
-                <p class="text-muted small">Utiliza estos botones solo en caso de emergencia real.</p>
-                <a href="tel:911" class="btn btn-danger btn-lg w-100 mb-2">Llamar 911</a>
-                <a href="tel:+52XXXXXXXXXX" class="btn btn-warning btn-lg w-100">Llamar Universidad</a>
-            </div>
+        <div class="section-header">
+            <h2 style="font-size: 1.2rem; margin: 0;">📄 Reporte Semanal</h2>
         </div>
-
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">Reportes y acceso de emergencia</h5>
-                <div class="mb-3 p-2 bg-light rounded">
-                    <label class="form-label small fw-bold">QR visible para todos (app sigue en tu PC)</label>
-                    <p class="small text-muted mb-1">Usa un túnel (ngrok, Cloudflare Tunnel) y pega aquí la URL pública. El QR apuntará a esa URL y cualquiera podrá abrir la ficha de emergencia.</p>
-                    <form method="post" action="index.php?route=set_public_url" class="row g-2 align-items-end">
-                        <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
-                        <div class="col">
-                            <input type="url" name="public_base_url" class="form-control form-control-sm" placeholder="https://abc123.ngrok.io"
-                                   value="<?= Security::e($publicBaseUrl ?? '') ?>">
-                        </div>
-                        <div class="col-auto">
-                            <button type="submit" class="btn btn-sm btn-outline-primary">Guardar URL</button>
-                        </div>
-                    </form>
-                </div>
-                <div class="mb-3">
-                    <form method="post" action="index.php?route=pdf_report" target="_blank">
-                        <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
-                        <label class="form-label">Contraseña para PDF</label>
-                        <input type="password" name="pdf_password" class="form-control mb-2" minlength="6" required>
-                        <button type="submit" class="btn btn-outline-primary w-100">
-                            Generar reporte PDF (última semana)
-                        </button>
-                    </form>
-                </div>
-
-                <div class="mb-3">
-                    <form method="post" action="index.php?route=generate_qr">
-                        <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
-                        <button type="submit" class="btn btn-outline-secondary w-100">
-                            Generar QR de emergencia (24h)
-                        </button>
-                    </form>
-                </div>
-
-                <?php if (!empty($emergencyQrUrl)): ?>
-                    <?php
-                    $emergencyQrUrlSafe = Security::e($emergencyQrUrl);
-                    $qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . rawurlencode($emergencyQrUrl);
-                    ?>
-                    <div class="mt-3 p-3 bg-white rounded-3 border text-center">
-                        <p class="small text-muted mb-2">Escanea este código QR en caso de emergencia (válido 24h):</p>
-                        <img src="<?= Security::e($qrImageUrl) ?>" alt="QR emergencia" width="200" height="200" class="d-block mx-auto p-2 bg-white rounded shadow-sm">
-                        <p class="small mt-3 mb-0 text-muted">
-                            <a href="<?= $emergencyQrUrlSafe ?>" target="_blank" rel="noopener">Abrir enlace de emergencia</a>
-                        </p>
-                    </div>
-                <?php endif; ?>
+        <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">Descarga un resumen cifrado de tu última semana para tu médico.</p>
+        
+        <form method="post" action="index.php?route=pdf_report" target="_blank">
+            <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
+            <div class="form-group">
+                <label style="font-size: 0.8rem;">Contraseña para el PDF</label>
+                <input type="password" name="pdf_password" placeholder="Mínimo 6 caracteres" minlength="6" required>
             </div>
-        </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; background: var(--secondary);">Generar PDF Seguro</button>
+        </form>
     </div>
 </div>
+
+<!-- SECCIÓN DE CONFIGURACIÓN (PIE DE PÁGINA) -->
+<div class="card" style="margin-top: 2rem; padding: 1.5rem;">
+    <div class="section-header">
+        <h3 style="font-size: 1rem; margin: 0;">Seguridad de la Cuenta</h3>
+    </div>
+    <form method="post" action="index.php?route=change_pin" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; align-items: flex-end;">
+        <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
+        <div class="form-group" style="margin: 0;">
+            <label style="font-size: 0.75rem;">PIN Actual</label>
+            <input type="password" name="current_pin" pattern="\d{6}" maxlength="6" style="padding: 0.4rem;" required>
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <label style="font-size: 0.75rem;">Nuevo PIN</label>
+            <input type="password" name="new_pin" pattern="\d{6}" maxlength="6" style="padding: 0.4rem;" required>
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <label style="font-size: 0.75rem;">Confirmar</label>
+            <input type="password" name="new_pin_confirm" pattern="\d{6}" maxlength="6" style="padding: 0.4rem;" required>
+        </div>
+        <button type="submit" class="btn btn-secondary" style="padding: 0.4rem; font-size: 0.8rem;">Actualizar PIN</button>
+    </form>
+</div>
+
 <?php
 $content = ob_get_clean();
-$title = 'Dashboard - Kanan Web';
+$title = 'Panel de Salud - Kanan';
 include __DIR__ . '/../layouts/base.php';
-
+?>

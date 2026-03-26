@@ -8,6 +8,8 @@ use Utils\Logger;
 use Utils\Validator;
 use Utils\Mailer;
 
+use Utils\GoogleAuthenticator;
+
 class AuthController
 {
     public function login(): void
@@ -31,11 +33,6 @@ class AuthController
                 $this->renderLogin('Nombre de usuario no válido.');
                 return;
             }
-            if (Security::isWeakPin($pin)) {
-                $error = 'PIN inválido o demasiado débil.';
-                $this->renderLogin($error);
-                return;
-            }
 
             $user = User::verifyCredentials($nombre, $pin);
 
@@ -46,8 +43,10 @@ class AuthController
             }
 
             $_SESSION['pending_mfa_user_id'] = $user->id;
+            // Guardamos si el usuario tiene secreto de Google Authenticator
+            $_SESSION['mfa_type'] = !empty($user->mfa_secret) ? 'totp' : 'email';
 
-            if (!empty($user->email)) {
+            if ($_SESSION['mfa_type'] === 'email' && !empty($user->email)) {
                 $code = User::createMfaCode($user->id);
                 Mailer::sendMfaCode($user->email, $code);
                 $_SESSION['mfa_via_email'] = true;
@@ -102,48 +101,44 @@ class AuthController
                 $this->renderRegister('El correo no es válido.');
                 return;
             }
-            if ($email !== '' && mb_strlen($email) > 255) {
-                $email = substr($email, 0, 255);
-            }
-            if ($email !== '') {
-                try {
-                    $pdo = \Config\Database::getConnection();
-                    $stmt = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
-                    $stmt->execute([':email' => $email]);
-                    if ($stmt->fetch()) {
-                        $this->renderRegister('Ese correo ya está registrado.');
-                        return;
-                    }
-                } catch (\PDOException $e) {
-                    if (str_contains($e->getMessage(), "Unknown column 'email'") || str_contains($e->getMessage(), 'email')) {
-                        $this->renderRegister('La base de datos no tiene la columna de correo. Ejecuta la migración: mariadb -u root -p kanan_web < database_migration_mfa.sql');
-                        return;
-                    }
-                    throw $e;
-                }
-            }
+
+            // Generar secreto de Google Authenticator para la nueva cuenta
+            $mfaSecret = GoogleAuthenticator::createSecret();
 
             try {
-                User::create($nombre, $pin, $email !== '' ? $email : null);
+                User::create($nombre, $pin, $email !== '' ? $email : null, $mfaSecret);
+                
+                // Guardamos datos temporalmente para mostrar el QR en la siguiente pantalla
+                $_SESSION['show_qr_nombre'] = $nombre;
+                $_SESSION['show_qr_secret'] = $mfaSecret;
+                
+                header('Location: index.php?route=register_success');
+                exit;
             } catch (\PDOException $e) {
-                error_log('Error en registro: ' . $e->getMessage());
-                if (str_contains($e->getMessage(), "Unknown column 'email'") || str_contains($e->getMessage(), "mfa_codes")) {
-                    $this->renderRegister('Falta ejecutar la migración de MFA. En la carpeta del proyecto ejecuta: mariadb -u root -p kanan_web < database_migration_mfa.sql');
-                    return;
-                }
-                $this->renderRegister('No se pudo crear la cuenta. Intenta de nuevo.');
-                return;
-            } catch (\Throwable $e) {
                 error_log('Error en registro: ' . $e->getMessage());
                 $this->renderRegister('No se pudo crear la cuenta. Intenta de nuevo.');
                 return;
             }
-
-            header('Location: index.php?route=login&registered=1');
-            exit;
         }
 
         $this->renderRegister();
+    }
+
+    public function registerSuccess(): void
+    {
+        if (!isset($_SESSION['show_qr_secret'])) {
+            header('Location: index.php?route=login');
+            exit;
+        }
+
+        $nombre = $_SESSION['show_qr_nombre'];
+        $secret = $_SESSION['show_qr_secret'];
+        $qrCodeUrl = GoogleAuthenticator::getQrCodeUrl($nombre, $secret, 'KananWeb');
+        
+        // Limpiamos la sesión después de obtener los datos para la vista
+        unset($_SESSION['show_qr_nombre'], $_SESSION['show_qr_secret']);
+
+        include __DIR__ . '/../views/auth/register_success.php';
     }
 
     public function loginMfa(): void
@@ -163,25 +158,34 @@ class AuthController
                 return;
             }
 
-            if (!Validator::string($code, 6, 6, '/^\d{6}$/')) {
-                Logger::log((int)$_SESSION['pending_mfa_user_id'], 'MFA fallido');
-                $this->renderMfa('Código de verificación inválido.');
-                return;
+            $userId = (int)$_SESSION['pending_mfa_user_id'];
+            $user = User::findById($userId);
+
+            if (!$user) {
+                header('Location: index.php?route=login');
+                exit;
             }
 
-            $userId = (int)$_SESSION['pending_mfa_user_id'];
-            $valid = !empty($_SESSION['mfa_via_email'])
-                ? User::consumeMfaCode($userId, $code)
-                : ($code === '123123');
+            $valid = false;
+            if (!empty($user->mfa_secret)) {
+                // Validación con Google Authenticator
+                $valid = GoogleAuthenticator::verifyCode($user->mfa_secret, $code);
+            } elseif (!empty($_SESSION['mfa_via_email'])) {
+                // Fallback a Email si no tiene secreto (cuentas antiguas)
+                $valid = User::consumeMfaCode($userId, $code);
+            } else {
+                // Fallback MVP
+                $valid = ($code === '123123');
+            }
 
             if (!$valid) {
                 Logger::log($userId, 'MFA fallido');
-                $this->renderMfa('Código incorrecto o expirado. Solicita uno nuevo iniciando sesión otra vez.');
+                $this->renderMfa('Código incorrecto o expirado.');
                 return;
             }
 
             $_SESSION['user_id'] = $userId;
-            unset($_SESSION['pending_mfa_user_id'], $_SESSION['mfa_via_email']);
+            unset($_SESSION['pending_mfa_user_id'], $_SESSION['mfa_via_email'], $_SESSION['mfa_type']);
             session_regenerate_id(true);
 
             Logger::log((int)$_SESSION['user_id'], 'MFA exitoso');

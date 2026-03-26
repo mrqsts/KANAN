@@ -258,10 +258,16 @@ class DashboardController
         }
 
         $temperatura = Security::sanitizeFloat($_POST['temperatura'] ?? null);
-        $presion = Security::sanitizeString($_POST['presion'] ?? null);
+        $presion_sys = Security::sanitizeInt($_POST['presion_sys'] ?? null);
+        $presion_dia = Security::sanitizeInt($_POST['presion_dia'] ?? null);
         $peso = Security::sanitizeFloat($_POST['peso'] ?? null);
         $nivel = Security::sanitizeInt($_POST['nivel_energia'] ?? null);
         $sintomas = Security::sanitizeString($_POST['sintomas'] ?? null);
+
+        $presion = null;
+        if ($presion_sys !== null && $presion_dia !== null) {
+            $presion = "{$presion_sys}/{$presion_dia}";
+        }
 
         if ($temperatura !== null && !Validator::float($temperatura, 35, 42)) {
             $temperatura = null;

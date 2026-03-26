@@ -12,6 +12,7 @@ class User
     public int $id;
     public string $nombre;
     public ?string $email;
+    public ?string $mfa_secret;
     public string $hash_pin;
     public string $salt;
     public int $failed_attempts;
@@ -33,6 +34,7 @@ class User
         $user->id = (int)$row['id'];
         $user->nombre = $row['nombre'];
         $user->email = isset($row['email']) && $row['email'] !== '' ? $row['email'] : null;
+        $user->mfa_secret = isset($row['mfa_secret']) && $row['mfa_secret'] !== '' ? $row['mfa_secret'] : null;
         $user->hash_pin = $row['hash_pin'];
         $user->salt = $row['salt'];
         $user->failed_attempts = (int)$row['failed_attempts'];
@@ -57,6 +59,7 @@ class User
         $user->id = (int)$row['id'];
         $user->nombre = $row['nombre'];
         $user->email = isset($row['email']) && $row['email'] !== '' ? $row['email'] : null;
+        $user->mfa_secret = isset($row['mfa_secret']) && $row['mfa_secret'] !== '' ? $row['mfa_secret'] : null;
         $user->hash_pin = $row['hash_pin'];
         $user->salt = $row['salt'];
         $user->failed_attempts = (int)$row['failed_attempts'];
@@ -65,17 +68,18 @@ class User
         return $user;
     }
 
-    public static function create(string $nombre, string $pin, ?string $email = null): void
+    public static function create(string $nombre, string $pin, ?string $email = null, ?string $mfa_secret = null): void
     {
         $pdo = Database::getConnection();
         $salt = Security::generateSalt(32);
         $hash = Security::hashPin($pin, $salt);
 
         $stmt = $pdo->prepare(
-            'INSERT INTO users (nombre, email, hash_pin, salt) VALUES (:nombre, :email, :hash_pin, :salt)'
+            'INSERT INTO users (nombre, email, mfa_secret, hash_pin, salt) VALUES (:nombre, :email, :mfa_secret, :hash_pin, :salt)'
         );
         $stmt->bindValue(':nombre', $nombre, PDO::PARAM_STR);
         $stmt->bindValue(':email', $email ?: null, $email ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':mfa_secret', $mfa_secret ?: null, $mfa_secret ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':hash_pin', $hash, PDO::PARAM_STR);
         $stmt->bindValue(':salt', $salt, PDO::PARAM_STR);
         $stmt->execute();

@@ -1,44 +1,50 @@
 <?php
-
 use Utils\Security;
-
+$title = 'Seguridad - MFA';
 ob_start();
 ?>
-<div class="row justify-content-center">
-    <div class="col-md-4">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title mb-3 text-center">Verificación en dos pasos</h5>
-                <?php if (!empty($mfaViaEmail)): ?>
-                    <p class="text-muted small">
-                        Hemos enviado un código de 6 dígitos a tu correo. Revísalo e ingrésalo aquí. El código caduca en 10 minutos.
-                    </p>
-                <?php else: ?>
-                    <p class="text-muted small">
-                        No tienes correo vinculado. Usa el código por defecto: <strong>123123</strong>. Configura tu correo en el dashboard para recibir códigos por email.
-                    </p>
-                <?php endif; ?>
 
-                <?php if (!empty($error)): ?>
-                    <div class="alert alert-danger">
-                        <?= Security::e($error); ?>
-                    </div>
-                <?php endif; ?>
+<div class="card" style="max-width: 400px; margin: 4rem auto; text-align: center;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">🔐</div>
+    <h2 style="color: var(--secondary);">Verificación de Seguridad</h2>
+    <p style="color: #666; font-size: 0.9rem; margin-bottom: 2rem;">
+        Por favor, ingresa el código de 6 dígitos que aparece en tu aplicación <strong>Google Authenticator</strong>.
+    </p>
 
-                <form method="post" action="index.php?route=login_mfa">
-                    <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
-                    <div class="mb-3">
-                        <label for="mfa_code" class="form-label">Código MFA</label>
-                        <input type="password" class="form-control" id="mfa_code" name="mfa_code" pattern="\d{6}" required>
-                    </div>
-                    <button type="submit" class="btn btn-success w-100">Acceder</button>
-                </form>
-            </div>
+    <?php if (!empty($error)): ?>
+        <div class="alert alert-error" style="font-size: 0.85rem; padding: 0.8rem;">
+            <?= Security::e($error); ?>
         </div>
-    </div>
+    <?php endif; ?>
+
+    <form method="post" action="index.php?route=login_mfa">
+        <input type="hidden" name="csrf_token" value="<?= Security::e($csrfToken); ?>">
+        
+        <div class="form-group">
+            <input type="text" 
+                   name="mfa_code" 
+                   id="mfa_code" 
+                   placeholder="000 000" 
+                   pattern="\d{6}" 
+                   maxlength="6" 
+                   style="text-align: center; font-size: 1.5rem; letter-spacing: 5px; font-weight: 600;"
+                   inputmode="numeric"
+                   autocomplete="one-time-code"
+                   required 
+                   autofocus>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem;">
+            Verificar y Acceder
+        </button>
+    </form>
+
+    <p style="margin-top: 2rem; font-size: 0.8rem; color: #999;">
+        ¿Tienes problemas? Asegúrate de que la hora de tu celular sea la correcta.
+    </p>
 </div>
+
 <?php
 $content = ob_get_clean();
-$title = 'MFA - Kanan Web';
 include __DIR__ . '/../layouts/base.php';
-
+?>
